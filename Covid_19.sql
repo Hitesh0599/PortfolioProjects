@@ -30,6 +30,12 @@ use [Portfolio Project];
   
   select * from  View_Country_Total_Deaths;
 
+
+
+ 
+
+
+
         --Visualize
         --looking at death rates
 
@@ -45,6 +51,9 @@ use [Portfolio Project];
 	    round((max(total_deaths)/max(total_cases)),4) as Death_Rate 
         from Covid_Deaths  where continent is not null  
 		group by location having round((max(total_deaths)/max(total_cases)),4)  is not null;
+
+
+
 
 
 		 
@@ -82,6 +91,7 @@ use [Portfolio Project];
 
 
  
+
 
         --Visualize
         --looking at country-wise deaths per million
@@ -125,7 +135,8 @@ use [Portfolio Project];
 
 	    --Visualize
         --looking at total deaths
-
+ 
+       
 	   --1st method
 		select location as Continent, max(cast(total_deaths as int)) as Total_Deaths from Covid_Deaths where continent is null and location not in ('World','International','European Union') group by location
 		order by  max(cast(total_deaths as int)) desc;
@@ -142,7 +153,9 @@ use [Portfolio Project];
 
 
 
-	--Visualize
+		
+
+		--Visualize
 	     --looking at death rates
 
 
@@ -162,7 +175,10 @@ use [Portfolio Project];
 
 
 		 
-                --Visualize
+		
+
+
+		--Visualize
 		--looking at Infection_Rate
 
 		--simple
@@ -241,39 +257,69 @@ use [Portfolio Project];
 
 
 
-        --looking at total_deaths
+        --looking at global deaths date-wise
+		
+		--1Visualize
+        select location as Location, 
+		total_deaths as Total_Deaths,population as World_Population, date
+        from Covid_Deaths where location='World';
 
-        select (select distinct location from Covid_Deaths where location ='World') as Location, 
-		max(cast(total_deaths as int)) as Total_Deaths, max(population) as World_Population
-        from Covid_Deaths;
 
-		create view
+		
+		--2
+		select date, sum(cast(new_deaths as int)) as Deaths_Deaths from Covid_Deaths where continent is not null
+		group by date having sum(cast(new_deaths as int)) is not null order by date;
+
+
+
+
+
+
 
 
 
 
 		--looking at death rates
+		--Visualize
+		--1using total_cases and total_deaths which are already cumulative
 
-		select (select distinct location from Covid_Deaths where location ='World') as Location, 
-		max(cast(total_deaths as int)) as Total_Deaths, max(total_cases) as Total_Cases,
-		max(cast(total_deaths as int))/max(total_cases) as Death_Rate
-		from Covid_Deaths;
+		select location as Location, 
+		total_deaths as Total_Deaths, total_cases as Total_Cases,
+		total_deaths/total_cases as Death_Rate, date
+		from Covid_Deaths where location='World';
+
+ 
+
+        --2Cumulating the new_deaths(daily deaths)
+	    select location, date, new_cases as Cases_per_day, sum(new_cases) over (order by date) as Cumulative_cases,
+		new_deaths as Deaths_per_day, sum(cast(new_deaths as int)) over (order by date) as Cumulative_deaths,
+		sum(cast(new_deaths as int)) over (order by date)/sum(new_cases) over (order by date) as Overall_Death_Rate
+		from Covid_Deaths where location='World' and new_cases !=0;
+
+
+
 
 
 
 
 		--looking at Infection_Rate
+		--Visualize
 
-		select (select distinct location from Covid_Deaths where location='World') as Location, max(total_cases) as Total_Cases, max(population) as World_Population,
-	    max(total_cases)/max(population) as Infection_Rate from Covid_Deaths;
+		select location as Location, date, total_cases as Total_Cases, population as World_Population,
+	    total_cases/population as Infection_Rate from Covid_Deaths where location = 'World';
+
 
 
 		--2nd method
-		select distinct (select distinct location from Covid_Deaths where location='World') as Location, 
+
+			select location as Location, 
 		(select sum(cast(new_cases as int)) from Covid_Deaths where continent is not null) as Total_Cases,
 		(select sum(distinct population) from Covid_Deaths where continent is not null) as World_Population,
 		(select sum(cast(new_cases as int)) from Covid_Deaths where continent is not null)/(select sum(distinct population) from Covid_Deaths where continent is not null) as Infection_Rate
-		from Covid_Deaths;
+		from Covid_Deaths where location='World'
+		group by location;
+
+
 
 
 
@@ -286,16 +332,34 @@ use [Portfolio Project];
 		
 
 
-		--looking at date-wise
 
-		select date, sum(new_cases) as Cases_per_day, sum(cast(new_deaths as int)) as Deaths_per_day, (sum(cast(new_deaths as int))/sum(new_cases)) as Death_Rate
-		from Covid_Deaths where continent is not null
-		group by date having sum(cast(new_cases as int)) is not null order by date asc ;
+
+
+
+		--looking at global tests date-wise
+
+        select date, sum(cast (new_tests as int)) as daily_tests from Covid_Vaccinations where continent is not null
+		group by date having sum(cast (new_tests as int)) is not null 
+		order by date;
+
+
+
+
+
+
+		--looking at global daily vaccinations
+
+		select date, sum(cast(new_vaccinations as int)) as Daily_Vaccinations from Covid_Vaccinations where continent is not null
+		group by date having sum(cast(new_vaccinations as int)) is not null
+		order by date;
+	
+           	
+	    
+
+
+
+
 		
-
-
-		select sum(new_cases) as Cases, sum(cast(new_deaths as int)) as Deaths, (sum(cast(new_deaths as int))/sum(new_cases)) as Death_Rate
-		from Covid_Deaths where continent is not null having sum(cast(new_cases as int)) is not null;
 
 
 
@@ -331,8 +395,7 @@ use [Portfolio Project];
 
 
 		
-		--3 continent-wise but diff from above as in above populations of country that did not conduct tests not counted in above so population taken from covid_death and 
-                --total_tests taken from covid_vaccinations 
+		--3 diff from above as in above populations of country that did not conduct tests not counted in above so population taken from covid_death and total_tests taken from covid_vaccinations 
 		--Visualize
 
 		select A.continent, A.Total_Tests, B.Population, A.Total_Tests/B.Population as Tests_per_Person from
