@@ -1,0 +1,170 @@
+use [Portfolio Project];
+
+select top 100 * from NashvilleHousing;
+
+
+
+--Changing the date format
+
+
+       --1st way (didn't work)
+         update NashvilleHousing set SaleDate=convert(date, SaleDate);
+
+
+
+      
+	   --2nd way
+         alter table NashvilleHousing add New_SaleDate date;
+
+         update NashvilleHousing set New_SaleDate=convert(date,SaleDate);
+
+         
+		 
+		 select SaleDate, New_SaleDate from NashvilleHousing;
+
+
+
+
+
+
+
+--Populate the Property_Address (same propertyaddress has same parcelid but still diff. uniqueid)
+         
+		 --1st way
+		 update NashvilleHousing set PropertyAddress=C.FirstAddress from
+		 (
+         select A.UniqueID as FirstID, isnull(A.PropertyAddress,B.PropertyAddress) as FirstAddress, B.ParcelID, B.UniqueID, B.PropertyAddress as SecondAddress from
+		 NashvilleHousing A inner join NashvilleHousing B on A.ParcelID=B.ParcelID and A.UniqueID!=B.UniqueID
+		 where A.PropertyAddress is null) C where NashvilleHousing.UniqueID=C.FirstID;
+
+
+
+		 --2nd way
+		 update A set PropertyAddress=isnull(A.PropertyAddress,B.PropertyAddress)
+		 from NashvilleHousing A inner join NashvilleHousing B on A.ParcelID=B.ParcelID and A.UniqueID!=B.UniqueID;
+
+
+
+
+
+
+
+
+
+--Breaking PropertyAddress into address and city
+		
+
+		--creating columns State and Lane
+		alter table NashvilleHousing add Lane varchar(255), State varchar(255);
+
+
+		select * from NashvilleHousing;
+
+		alter table NashvilleHousing drop column PropertySplitCity;
+
+
+		
+		--Updating the new columns
+		
+		
+		--for State
+		update NashvilleHousing set State=SUBSTRING(PropertyAddress,CHARINDEX(',',PropertyAddress)+1,len(PropertyAddress));
+
+
+		--for Lane
+		update NashvilleHousing set Lane=substring(PropertyAddress,1,charindex(',',PropertyAddress)-1);
+
+
+
+
+		--Renaming columns
+        EXEC sp_rename 'NashvilleHousing.Lane', 'PropertySplitAddress', 'COLUMN'; 
+
+		
+        EXEC sp_rename 'NashvilleHousing.State', 'PropertySplitCIty', 'COLUMN'; 
+
+
+
+	
+
+
+
+
+
+
+--Breaking OwnerAddress into Address, city, & State
+
+
+		select parsename(replace(OwnerAddress,',','.'),3)
+		,parsename(replace(OwnerAddress,',','.'),2)
+		,parsename(REPLACE(OwnerAddress,',','.'),1)
+		from NashvilleHousing;
+
+
+		alter table NashvilleHousing add OwnerSplitAddress nvarchar(255), OwnerSplitCity nvarchar(255), OwnerSplitState nvarchar(255);
+
+		select * from NashvilleHousing;
+
+
+		--parsing starts with rightside
+		update NashvilleHousing set OwnerSplitAddress=parsename(replace(OwnerAddress,',','.'),3);
+
+		update NashvilleHousing set OwnerSplitCity=parsename(replace(OwnerAddress,',','.'),2);
+
+        update NashvilleHousing set OwnerSplitState=parsename(replace(OwnerAddress,',','.'),1);
+
+
+
+
+
+
+--Changing Y to 'Yes' and N to 'No' in SoldAsVacant
+
+
+		update NashvilleHousing set SoldAsVacant=case
+		when SoldAsVacant='Y' then 'Yes'
+		when SoldAsVacant='N' then 'No'
+		else SoldAsVacant
+		end;
+
+
+        select SoldAsVacant,count(*) from NashvilleHousing
+        group by SoldAsVacant;
+
+
+		select * from NashvilleHousing;
+
+
+
+
+
+
+--remove duplicate
+
+select * from NashvilleHousing;
+
+
+		--1st
+		with cte as(
+		select *, row_number() over (partition by ParcelID, PropertyAddress, SaleDate, SalePrice, LegalReference order by SalePrice desc) as Rank_num 
+		from NashvilleHousing 
+		)
+		delete from cte where Rank_num>1;
+
+
+
+		--2nd
+		delete from NashvilleHousing where UniqueID  in
+		(select UniqueID from
+		(select UniqueID, ParcelID, PropertyAddress, SaleDate, SalePrice, LegalReference, 
+		ROW_NUMBER() over (partition by ParcelID, PropertyAddress, SaleDate, SalePrice, LegalReference order by SalePrice) as row_num
+		from NashvilleHousing) A where row_num>1);
+
+
+
+
+
+
+
+
+
