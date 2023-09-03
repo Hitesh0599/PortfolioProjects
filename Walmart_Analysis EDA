@@ -1,0 +1,178 @@
+use PortfolioProject;
+
+
+
+--Trends over time
+
+	-- Best Stores
+
+
+
+		-- overall best store 
+
+		--1(Top 5 Store on the basis of Avg_Sales)
+		select Store, Date, Weekly_Sales from Walmart where Store in
+		(select top 5 Store from Walmart
+		group by Store
+		order by avg(Weekly_Sales)  desc)
+		order by Store asc, Date asc;
+
+
+		--2(Top store on the basis of finding each week's max and in which store it lied) (KPI 1)
+		select Store, count(Store) as count from Walmart wal inner join
+		(select date, max(Weekly_Sales) as Max from Walmart
+		group by date)A on wal.Weekly_Sales=A.Max
+		group by Store 
+		order by count desc;
+
+
+
+
+
+
+
+		--for non holiday weeks
+
+		select Store, Date, Weekly_Sales from Walmart where Store in
+		(select top 3 Store  from Walmart where Holiday_Flag=0
+		group by Store
+		order by avg(Weekly_Sales)  desc)
+		and Holiday_Flag=0;
+
+
+
+
+		--for holiday week
+
+		select Store, Date, Weekly_Sales from Walmart where Store in
+		(select top 3 Store as Avg_sales from Walmart where Holiday_Flag=1
+		group by Store
+		order by avg(Weekly_Sales) desc)
+		and Holiday_Flag=1;
+
+
+
+
+
+	-- Worst Store
+
+
+
+
+		--1 Trend of top 5 worst on the basis of avg
+		select Store, Date, Weekly_Sales from Walmart where Store in
+		(select top 5 Store from Walmart 
+		group by Store 
+		order by Avg(Weekly_Sales) asc)
+		order by Store asc, Date asc;
+		
+	
+
+	       
+		--2 Stores that were bottom in weekly sales (KPI 2)
+
+		select Store, count(Store) as count from Walmart wal inner join
+		(select Date, Min(Weekly_Sales) as Min from Walmart
+		group by Date)A on wal.Weekly_Sales=A.Min
+		group by Store;
+
+
+
+
+
+
+
+--Temp (KPI)
+
+		--temp bw -2.06 and 50.01 (colder)
+
+		select avg(Weekly_Sales) as Avg_Sales from Walmart where Temperature between -2.06 and 50.01;
+
+
+		select Temperature, Weekly_Sales from Walmart
+		order by Temperature asc;
+
+
+		--temp bw 50.01 and 100.14 (warmer)
+
+		select avg(Weekly_Sales) as Avg_Sales from Walmart where Temperature between 50.01 and 100.14;
+
+
+
+
+
+
+		--Fuel Price v/s Weekly Sales (create a bin for bargraph)
+
+		select Fuel_Price, count(Weekly_Sales) from Walmart 
+		group by Fuel_Price
+		order by Fuel_Price asc;
+
+
+
+
+
+		--Best holiday week
+
+		--1
+		select top 3 date, sum(Weekly_Sales) as Sum from Walmart
+		where Holiday_Flag=1 
+		group by Date
+		order by Sum desc;
+
+		--2
+		Select Date, count(Date) from Walmart wal inner join 
+		(select Store, max(Weekly_Sales) as Max from Walmart where Holiday_Flag=1 group by Store)A on wal.Weekly_Sales=A.Max
+		group by Date;
+
+
+
+
+		--Best Non-holiday week
+
+		--1(finding max of all stores and finding in which week it belongs)
+		select Date, count(Date) from
+		(select wal.Store, wal.Date, wal.Weekly_Sales from Walmart wal inner join
+		(select store, max(Weekly_Sales) as Max from Walmart where Holiday_Flag=0
+		group by store) A on wal.Weekly_Sales=A.Max)B group by Date 
+		order by count(Date) desc;
+
+
+		--2(visualization)
+		select top 3 date, sum(Weekly_Sales) as Sum from Walmart
+		where Holiday_Flag=0 
+		group by Date
+		order by Sum desc;
+
+		
+
+
+		
+
+--Unemployment scatter plot with Sales
+        
+
+		select Store, Unemployment, Weekly_Sales as Avg_Sales from Walmart
+		order by Unemployment asc;
+
+
+
+
+
+	
+--Donought Chart for Holiday vs Non-holiday Sales per week (KPI 5)
+
+		select Holiday_Flag as is_Holiday, sum(Weekly_Sales)/count(Holiday_Flag) as Sales_per_Week from Walmart where Holiday_Flag=1 
+		group by Holiday_Flag
+		union
+		select Holiday_Flag as is_Holiday, sum(Weekly_Sales)/count(Holiday_Flag) as Sales_per_Week from Walmart where Holiday_Flag=0
+		group by Holiday_Flag;
+
+
+
+
+
+--Fuel Price Bar Graph
+
+		select Fuel_Price, sum(Weekly_Sales) as Total_Sales from Walmart
+		group by Fuel_Price;
